@@ -8,7 +8,7 @@ const app = Elm.Main.init({flags: []});
 var webSocket;
 
 function connect() {
-    let ws = new WebSocket('wss://api-ws.sacon.symphonia.io');
+    let ws = new WebSocket('wss://api-ws.resilient-demo.symphonia.io');
     ws.onopen = wsOnOpen;
     ws.onclose = wsOnClose;
     ws.onerror = wsOnError;

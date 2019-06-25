@@ -48,7 +48,7 @@ init : ( Model, Cmd Msg )
 init =
     ( Model Nothing Nothing Nothing []
     , Http.get
-        { url = "https://api.sacon.symphonia.io/history"
+        { url = "https://api.resilient-demo.symphonia.io/history"
         , expect = Http.expectJson LoadHistory historyDecoder
         }
     )

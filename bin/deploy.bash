@@ -30,4 +30,4 @@ aws cloudformation deploy \
     --region ${REGION} \
     --capabilities CAPABILITY_IAM \
     --template-file dist/template-packaged.yaml \
-    --stack-name serverless-application
+    --stack-name resilient-system

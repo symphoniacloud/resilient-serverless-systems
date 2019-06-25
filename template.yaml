@@ -1,29 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: Serverless application infrastructure
+Description: Demo application for Resilient Serverless Systems talk
 
 Parameters:
 
-  HostedZoneId:
-    Type: AWS::Route53::HostedZone::Id
-    # e.g., "Z45J1D2QQ43H93", from the Route 53 hosted zone that will contain
-    #   the domain names below.
-    Default:  Z2S9JUE6PMAH1N
-
-  CertificateDomainName:
+  DomainName:
     Type: String
-    Default: "*.sacon.symphonia.io"
-
-  RestDomainName:
-    Type: String
-    Default: "api.sacon.symphonia.io"
-
-  # # Setting custom domain names on WebSocket APIs isn't
-  # #  yet supported by CloudFormation, so this is all
-  # #  done manually.
-  WebSocketDomainName:
-    Type: String
-    Default: "api-ws.sacon.symphonia.io"
+    Default: "resilient-demo.symphonia.io"
 
   ValidationDomain:
     Type: String
@@ -47,6 +30,7 @@ Resources:
   RestApi:
     Type: AWS::Serverless::Api
     Properties:
+      Name: !Sub "${AWS::StackName}-api"
       EndpointConfiguration: REGIONAL
       StageName: Prod
 
@@ -113,7 +97,7 @@ Resources:
   WebSocketApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: WebSocket
+      Name: !Sub "${AWS::StackName}-ws-api"
       ProtocolType: WEBSOCKET
       RouteSelectionExpression: "$request.body.action"
   
@@ -289,16 +273,16 @@ Resources:
   Certificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
-      DomainName: !Ref CertificateDomainName
+      DomainName: !Sub "*.${DomainName}"
       DomainValidationOptions:
-        - DomainName: !Ref CertificateDomainName
+        - DomainName: !Sub "*.${DomainName}"
           ValidationDomain: !Ref ValidationDomain
       
   RestCustomDomain:
     Type: AWS::ApiGateway::DomainName
     Properties:
       RegionalCertificateArn: !Ref Certificate
-      DomainName: !Ref RestDomainName
+      DomainName: !Sub "api.${DomainName}"
       EndpointConfiguration:
         Types: [ REGIONAL ]
 
@@ -313,7 +297,7 @@ Resources:
   WebSocketCustomDomain:
     Type: AWS::ApiGatewayV2::DomainName
     Properties:
-      DomainName: !Ref WebSocketDomainName
+      DomainName: !Sub "api-ws.${DomainName}"
       DomainNameConfigurations:
         - EndpointType: REGIONAL
           CertificateArn: !Ref Certificate
@@ -357,22 +341,23 @@ Resources:
   RestDnsRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      AliasTarget:
-        DNSName: !GetAtt RestCustomDomain.RegionalDomainName
-        HostedZoneId: !GetAtt RestCustomDomain.RegionalHostedZoneId
       HealthCheckId: !Ref HealthCheck
-      HostedZoneId: !Ref HostedZoneId
-      Name: !Ref RestDomainName
+      HostedZoneName: !Sub "${DomainName}."
+      Name: !Sub "api.${DomainName}"
       Region: !Ref AWS::Region
       SetIdentifier: !Sub "${AWS::Region} API"
       Type: A
+      AliasTarget:
+        DNSName: !GetAtt RestCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt RestCustomDomain.RegionalHostedZoneId
 
+#  # As of June 2019, this produces an "Internal Error" in CloudFormation
 #  WebSocketDnsRecord:
 #    Type: AWS::Route53::RecordSet
 #    Properties:
 #      HealthCheckId: !Ref HealthCheck
-#      HostedZoneId: !Ref HostedZoneId
-#      Name: !Ref WebSocketDomainName
+#      HostedZoneName: !Sub "${DomainName}."
+#      Name: !Sub "api-ws.${DomainName}"
 #      Region: !Ref AWS::Region
 #      SetIdentifier: !Sub "${AWS::Region} WS-API"
 #      Type: A
