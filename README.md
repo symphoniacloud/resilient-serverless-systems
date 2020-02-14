@@ -9,19 +9,23 @@ Before deploying:
 1. Change all code references from "api.resilient-demo.symphonia.io" or "api-ws.resilient-demo.symphonia.io" to match your domain name.
 1. Change the HostedZoneId in `template.yaml` to refer to your hosted zone.
 
-To deploy the backend, run `./bin/deploy.bash <region>` across one or more AWS regions.
+To deploy the backend:
 
-After deploying:
+```
+$ cd backend
+$ ./bin/deploy.bash <AWS region>
+```
 
-1. Manually configure DynamoDB Global Tables via the AWS web console.
-2. Manually add ALIAS records to the Route 53 hosted zone for each region, for the WebSocket API. The Route 53 alias target value should be the "Target Domain Name" from the appropriate entry in the API Gateway console's "Custom Domain Names" section. Same for the "Alias Hosted Zone ID" value.
+Deploy across as many AWS regions as you wish.
+
+After deploying, manually configure DynamoDB Global Tables via the AWS web console or API.
 
 To run the frontend:
 
 ```
-$ cd www
-$ npm install
-$ npm run dev
+$ cd frontend
+$ elm make src/Main.elm --optimize --output=dist/elm.js
+$ python3 -m http.server
 ```
 
-Navigate to http://localhost:3000
+Navigate to http://localhost:8000
