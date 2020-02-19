@@ -1,54 +1,55 @@
 package io.symphonia.lambda;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.symphonia.shared.Envelope;
 import io.symphonia.shared.EnvelopeMessage;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class HistoryReaderLambda {
 
+    private static String AWS_REGION = System.getenv("AWS_REGION");
     private static String MESSAGES_TABLE = System.getenv("MESSAGES_TABLE");
-    private static DynamoDBMapperConfig DYNAMODB_MAPPER_CONFIG =
-            DynamoDBMapperConfig.builder()
-                    .withTableNameOverride(DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(MESSAGES_TABLE))
-                    .build();
-
     private static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private DynamoDBMapper dynamoDBMapper;
-    private String region;
+    private DynamoDbClient dynamoDbClient;
 
     public HistoryReaderLambda() {
-        this(new DynamoDBMapper(AmazonDynamoDBClientBuilder.defaultClient(), DYNAMODB_MAPPER_CONFIG));
+        this(DynamoDbClient.builder().httpClientBuilder(UrlConnectionHttpClient.builder()).build());
     }
 
-    public HistoryReaderLambda(DynamoDBMapper dynamoDBMapper) {
-        this.dynamoDBMapper = dynamoDBMapper;
-        this.region = System.getenv("AWS_REGION");
+    public HistoryReaderLambda(DynamoDbClient dynamoDbClient) {
+        this.dynamoDbClient = dynamoDbClient;
     }
 
     public APIGatewayProxyResponseEvent handler(APIGatewayProxyRequestEvent event) throws JsonProcessingException {
 
-        var query = new DynamoDBQueryExpression<EnvelopeMessage>()
-                .withConsistentRead(false)
-                .withScanIndexForward(false)
-                .withLimit(100)
-                .withKeyConditionExpression("#type = :type")
-                .withExpressionAttributeNames(Map.of("#type", "type"))
-                .withExpressionAttributeValues(Map.of(":type", new AttributeValue("message")))
-                .withIndexName("messages_by_ts");
+        var queryRequest = QueryRequest.builder()
+                .consistentRead(false)
+                .scanIndexForward(false)
+                .limit(100)
+                .keyConditionExpression("#type = :type")
+                .expressionAttributeNames(Map.of("#type", "type"))
+                .expressionAttributeValues(Map.of(":type", AttributeValue.builder().s("message").build()))
+                .tableName(MESSAGES_TABLE)
+                .indexName("messages_by_ts")
+                .build();
 
-        var messages = dynamoDBMapper.query(EnvelopeMessage.class, query);
-        var envelope = new Envelope(messages, region);
+        var messages = dynamoDbClient
+                .query(queryRequest)
+                .items().stream()
+                .map(EnvelopeMessage::new)
+                .collect(Collectors.toList());
+
+        var envelope = new Envelope(messages, AWS_REGION);
 
         var response = new APIGatewayProxyResponseEvent();
         response.setStatusCode(200);

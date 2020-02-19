@@ -1,36 +1,30 @@
 package io.symphonia.lambda;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyResponseEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.symphonia.shared.EnvelopeMessage;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
 import java.io.IOException;
 import java.util.Map;
 
 public class OnSendLambda {
 
+    private static String AWS_REGION = System.getenv("AWS_REGION");
     private static String MESSAGES_TABLE = System.getenv("MESSAGES_TABLE");
-    private static DynamoDBMapperConfig DYNAMODB_MAPPER_CONFIG =
-            DynamoDBMapperConfig.builder()
-                    .withTableNameOverride(DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(MESSAGES_TABLE))
-                    .build();
-
     private static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private DynamoDBMapper dynamoDBMapper;
-    private String region;
+    private DynamoDbClient dynamoDbClient;
 
     public OnSendLambda() {
-        this(new DynamoDBMapper(AmazonDynamoDBClientBuilder.defaultClient(), DYNAMODB_MAPPER_CONFIG));
+        this(DynamoDbClient.builder().httpClientBuilder(UrlConnectionHttpClient.builder()).build());
     }
 
-    public OnSendLambda(DynamoDBMapper dynamoDBMapper) {
-        this.dynamoDBMapper = dynamoDBMapper;
-        this.region = System.getenv("AWS_REGION");
+    public OnSendLambda(DynamoDbClient dynamoDbClient) {
+        this.dynamoDbClient = dynamoDbClient;
     }
 
     public APIGatewayV2ProxyResponseEvent handler(APIGatewayV2ProxyRequestEvent event) throws IOException {
@@ -41,10 +35,16 @@ public class OnSendLambda {
         message.setId(event.getRequestContext().getRequestId());
         message.setTs(System.currentTimeMillis());
         message.setMessage((String) incoming.getOrDefault("message", "No message"));
-        message.setRegion(region);
+        message.setRegion(AWS_REGION);
         message.setSource(connectionId);
-        message.setType("message");
-        dynamoDBMapper.save(message);
+
+        var request = PutItemRequest.builder()
+                .tableName(MESSAGES_TABLE)
+                .item(message.toItem())
+                .build();
+
+        dynamoDbClient.putItem(request);
+
 
         var response = new APIGatewayV2ProxyResponseEvent();
         response.setStatusCode(200);

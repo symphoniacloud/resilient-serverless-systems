@@ -1,19 +1,41 @@
 package io.symphonia.shared;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.*;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import java.util.Map;
 
 public class EnvelopeMessage {
+
     private String id;
     private Long ts;
     private String type = "message";
-    private String message = "No message";
+    private String message;
     private String source;
     private String region;
 
     public EnvelopeMessage() {
     }
 
-    @DynamoDBHashKey(attributeName = "id")
+    public EnvelopeMessage(Map<String, AttributeValue> item) {
+        this.id = AttributeUtil.getOrThrowS(item, "id");
+        this.ts = AttributeUtil.getOrThrowL(item, "ts");
+        this.type = AttributeUtil.getOrThrowS(item, "type");
+        this.message = AttributeUtil.getOrThrowS(item, "message");
+        this.source = AttributeUtil.getOrThrowS(item, "source");
+        this.region = AttributeUtil.getOrThrowS(item, "region");
+    }
+
+    public Map<String, AttributeValue> toItem() {
+        return Map.of(
+                "id", AttributeValue.builder().s(id).build(),
+                "ts", AttributeValue.builder().n(Long.toString(ts)).build(),
+                "message", AttributeValue.builder().s(message).build(),
+                "region", AttributeValue.builder().s(region).build(),
+                "source", AttributeValue.builder().s(source).build(),
+                "type", AttributeValue.builder().s(type).build()
+        );
+    }
+
     public String getId() {
         return id;
     }
@@ -22,8 +44,6 @@ public class EnvelopeMessage {
         this.id = id;
     }
 
-    @DynamoDBRangeKey
-    @DynamoDBIndexRangeKey(attributeName = "ts", globalSecondaryIndexName = "messages_by_ts")
     public Long getTs() {
         return ts;
     }
@@ -32,7 +52,6 @@ public class EnvelopeMessage {
         this.ts = ts;
     }
 
-    @DynamoDBIndexHashKey(attributeName = "type", globalSecondaryIndexName = "messages_by_ts")
     public String getType() {
         return type;
     }
@@ -41,7 +60,6 @@ public class EnvelopeMessage {
         this.type = type;
     }
 
-    @DynamoDBAttribute(attributeName = "message")
     public String getMessage() {
         return message;
     }
@@ -50,7 +68,6 @@ public class EnvelopeMessage {
         this.message = message;
     }
 
-    @DynamoDBAttribute(attributeName = "source")
     public String getSource() {
         return source;
     }
@@ -59,7 +76,6 @@ public class EnvelopeMessage {
         this.source = source;
     }
 
-    @DynamoDBAttribute(attributeName = "region")
     public String getRegion() {
         return region;
     }

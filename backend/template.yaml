@@ -75,7 +75,7 @@ Resources:
       Environment:
         Variables:
           CONNECTIONS_TABLE: !Ref ConnectionsTable
-          WEB_SOCKETS_ENDPOINT: !Sub "${WebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${WebSocketStage}"
+          WEB_SOCKETS_ENDPOINT: !Sub "https://${WebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${WebSocketStage}"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ConnectionsTable
