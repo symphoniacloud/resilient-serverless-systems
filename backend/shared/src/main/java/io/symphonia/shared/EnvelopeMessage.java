@@ -1,6 +1,6 @@
 package io.symphonia.shared;
 
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
 import java.util.Map;
 
@@ -27,12 +27,12 @@ public class EnvelopeMessage {
 
     public Map<String, AttributeValue> toItem() {
         return Map.of(
-                "id", AttributeValue.builder().s(id).build(),
-                "ts", AttributeValue.builder().n(Long.toString(ts)).build(),
-                "message", AttributeValue.builder().s(message).build(),
-                "region", AttributeValue.builder().s(region).build(),
-                "source", AttributeValue.builder().s(source).build(),
-                "type", AttributeValue.builder().s(type).build()
+                "id", new AttributeValue(id),
+                "ts", new AttributeValue().withN(Long.toString(ts)),
+                "message", new AttributeValue(message),
+                "region", new AttributeValue(region),
+                "source", new AttributeValue(source),
+                "type", new AttributeValue(type)
         );
     }
 

@@ -1,12 +1,12 @@
 package io.symphonia.lambda;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyResponseEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.symphonia.shared.EnvelopeMessage;
-import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
 import java.io.IOException;
 import java.util.Map;
@@ -17,13 +17,13 @@ public class OnSendLambda {
     private static String MESSAGES_TABLE = System.getenv("MESSAGES_TABLE");
     private static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private DynamoDbClient dynamoDbClient;
+    private AmazonDynamoDB dynamoDbClient;
 
     public OnSendLambda() {
-        this(DynamoDbClient.builder().httpClientBuilder(UrlConnectionHttpClient.builder()).build());
+        this(AmazonDynamoDBClientBuilder.defaultClient());
     }
 
-    public OnSendLambda(DynamoDbClient dynamoDbClient) {
+    public OnSendLambda(AmazonDynamoDB dynamoDbClient) {
         this.dynamoDbClient = dynamoDbClient;
     }
 
@@ -38,10 +38,9 @@ public class OnSendLambda {
         message.setRegion(AWS_REGION);
         message.setSource(connectionId);
 
-        var request = PutItemRequest.builder()
-                .tableName(MESSAGES_TABLE)
-                .item(message.toItem())
-                .build();
+        var request = new PutItemRequest()
+                .withTableName(MESSAGES_TABLE)
+                .withItem(message.toItem());
 
         dynamoDbClient.putItem(request);
 
