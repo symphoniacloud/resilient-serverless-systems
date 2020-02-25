@@ -18,9 +18,11 @@ Globals:
     Runtime: java11
     MemorySize: 3008
     Timeout: 30
+    Tracing: Active
 
   Api:
     Cors: "'*'"
+    TracingEnabled: true
 
 Resources:
 
